@@ -11,12 +11,12 @@ document.getElementById("uploadForm").addEventListener("submit", async function 
         return;
     }
 
-    // 🔐 Запрос токена и chat_id через prompt()
-    const TELEGRAM_BOT_TOKEN = prompt("Введите ваш Telegram Bot Token:", "");
-    const TELEGRAM_CHAT_ID = prompt("Введите ваш Telegram Chat ID:", "");
+    // 🔐 Получаем токен и chat_id через prompt()
+    const TELEGRAM_BOT_TOKEN = prompt("Введите ваш Telegram Bot Token:");
+    const TELEGRAM_CHAT_ID = prompt("Введите ваш Telegram Chat ID:");
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-        alert("Необходимо указать Telegram Bot Token и Chat ID");
+        alert("Вы должны ввести Telegram Bot Token и Chat ID");
         return;
     }
 
@@ -30,32 +30,44 @@ document.getElementById("uploadForm").addEventListener("submit", async function 
             const key = file.name.replace(".png", "");
             if (["0", "24", "25", "31"].includes(key)) {
                 const url = await uploadToTelegram(file, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID);
-                if (url) weaponUrls[key] = url;
+                if (url && url.endsWith(".jpg")) {
+                    weaponUrls[key] = url.replace(".jpg", ".png");
+                } else {
+                    weaponUrls[key] = url;
+                }
             }
         }
 
-        // 🎯 logo: 1 до 21
+        // 🎯 logo: 1–21
         const logoUrls = {};
         for (const file of logoFiles) {
             const key = file.name.replace(".png", "");
             if (key >= 1 && key <= 21) {
                 const url = await uploadToTelegram(file, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID);
-                if (url) logoUrls[key] = url;
+                if (url && url.endsWith(".jpg")) {
+                    logoUrls[key] = url.replace(".jpg", ".png");
+                } else {
+                    logoUrls[key] = url;
+                }
             }
         }
 
-        // 🔑 auth.png
+        // 🔑 winauth/auth.png
         let authUrl = "";
         if (authFile) {
             authUrl = await uploadToTelegram(authFile, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID);
+            if (authUrl && authUrl.endsWith(".jpg")) {
+                authUrl = authUrl.replace(".jpg", ".png");
+            }
         }
 
         // 🔄 Обновляем JS-код
-        jsCode = updateJsCode(jsCode, "weapon", weaponUrls);
-        jsCode = updateJsCode(jsCode, "logo", logoUrls);
+        jsCode = updateJsObject(jsCode, "weapon", weaponUrls);
+        jsCode = updateJsObject(jsCode, "logo", logoUrls);
 
+        // 🖼 Обновляем background-image
         if (authUrl) {
-            jsCode = updateBackgroundImage(jsCode, authUrl);
+            jsCode = updateBackgroundImageUrl(jsCode, authUrl);
         }
 
         // 📄 Сохраняем обработанный файл
@@ -71,7 +83,7 @@ document.getElementById("uploadForm").addEventListener("submit", async function 
     reader.readAsText(jsFile);
 });
 
-// 📤 Загрузка файла на Telegram
+// 📤 Загрузка изображения на Telegram
 async function uploadToTelegram(file, token, chatId) {
     const formData = new FormData();
     formData.append("photo", file);
@@ -96,30 +108,54 @@ async function uploadToTelegram(file, token, chatId) {
         }
     } catch (err) {
         console.error("[Ошибка загрузки в Telegram]", err);
-        alert("Ошибка подключения к Telegram API");
+        alert("Не удалось подключиться к Telegram API");
     }
 
     return "";
 }
 
 // 🧠 Обновление JS-объекта (weapon или logo)
-function updateJsCode(code, objName, urlMapping) {
+function updateJsObject(code, objName, urlMapping) {
     const regex = new RegExp(`${objName}:\\s*{([^}]*)}`, 's');
     const match = code.match(regex);
     if (!match) return code;
 
-    let content = match[0].slice(match[0].indexOf("{") + 1, match[0].lastIndexOf("}")).trim();
+    let content = match[0];
+    let inner = content.slice(content.indexOf("{") + 1, content.lastIndexOf("}"));
 
-    for (const [key, url] of Object.entries(urlMapping)) {
+    // Удаляем сломанные ключи вроде "1"0"
+    inner = inner.replace(/"[^"]+":\s*".*?",?\s*/g, (match) => {
+        const fixedMatch = match.replace(/"/g, '');
+        return fixedMatch;
+    });
+
+    // Добавляем правильные ключи
+    for (const key in urlMapping) {
+        const value = urlMapping[key];
         const keyRegex = new RegExp(`"${key}"\\s*:\\s*"[^"]*"`, 'g');
-        content = content.replace(keyRegex, `"${key}": "${url}"`);
+        inner = inner.replace(keyRegex, `"${key}": "${value}"`);
     }
 
-    const newObj = `${objName}: {${content}}`;
+    // Собираем обратно объект
+    const newObj = `${objName}: {${inner}}`;
     return code.replace(regex, newObj);
 }
 
-// 🖼 Обновление background-image
-function updateBackgroundImage(code, url) {
-    return code.replace(/url\(\s*"[^)]*"\s*\)/, `url("${url}")`);
+// 🖼 Обновление background-image в строке 475
+function updateBackgroundImageUrl(code, url) {
+    const lines = code.split("\n");
+
+    if (lines.length >= 475) {
+        let line = lines[474]; // строка 475 (индекс 474)
+
+        // Ищем url() и заменяем его
+        const match = line.match(/url\s*$([^)]*)$/);
+        if (match) {
+            line = line.replace(match[1], `"${url}"`);
+            lines[474] = line;
+            return lines.join("\n");
+        }
+    }
+
+    return code;
 }
