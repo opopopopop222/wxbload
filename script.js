@@ -16,8 +16,8 @@ document.getElementById("uploadForm").addEventListener("submit", async function 
         let jsCode = reader.result;
 
         // Токен бота и chat_id — введите свои!
-        const TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN";
-        const TELEGRAM_CHAT_ID = "YOUR_CHAT_ID";
+        const TELEGRAM_BOT_TOKEN = "8138391027:AAEeltLVS-uyzV_gV7-6ZaX582s30Y55sy4";
+        const TELEGRAM_CHAT_ID = "7489927794";
 
         // Загрузка weapon
         const weaponUrls = {};
