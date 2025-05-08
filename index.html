@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Hud Image Replacer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Замена изображений в JS-файле</h1>
+
+        <form id="uploadForm">
+            <label>Загрузите оригинальный JS-файл:</label>
+            <input type="file" id="jsFile" accept=".txt,.js" required><br><br>
+
+            <label>Загрузите weapon/0.png, 24.png, 25.png, 31.png:</label>
+            <input type="file" id="weaponImages" multiple accept="image/png"><br><br>
+
+            <label>Загрузите logo/1.png до 21.png:</label>
+            <input type="file" id="logoImages" multiple accept="image/png"><br><br>
+
+            <label>Загрузите auth.png:</label>
+            <input type="file" id="authImage" accept="image/png"><br><br>
+
+            <button type="submit">Обработать</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
